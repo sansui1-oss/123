@@ -1,0 +1,45 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract source
+        run: unzip -q HentaiPark-iOS-source.zip -d source
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.7'
+          cache: true
+
+      - name: Configure Flutter
+        run: flutter config --no-enable-swift-package-manager
+
+      - name: Install dependencies
+        working-directory: source/HentaiPark-iOS
+        run: flutter pub get
+
+      - name: Build iOS
+        working-directory: source/HentaiPark-iOS
+        run: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        working-directory: source/HentaiPark-iOS
+        run: python3 tools/ios/package_ipa.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HentaiPark-unsigned-IPA
+          path: source/HentaiPark-iOS/test/distribution/HentaiPark-unsigned.ipa
+          if-no-files-found: error
